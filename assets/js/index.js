@@ -234,6 +234,23 @@ function formatCOO(raw) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+function formatName(s) {
+  if (!s) return "";
+  s = String(s).trim().toLowerCase();
+  // Capitalize at start of string, after space, slash, or hyphen
+  s = s.replace(/(^|[ \/\-])([a-z])/g, (m, p1, p2) => p1 + p2.toUpperCase());
+  return s;
+}
+
+function upcaseSizeTokens(s){
+  return String(s||"").replace(/\b(2xs|xs|s|m|l|xl|2xl|3xl)\b/gi, m => m.toUpperCase());
+}
+
+function isOneSize(size){
+  const s = String(size||"").trim().toUpperCase();
+  return s === "ONE SIZE" || s === "OS";
+}
+
 
 /* ---------- state ---------- */
 let namesRows=[], trackerRows=[];
@@ -306,7 +323,9 @@ byId('genBtn').addEventListener('click', ()=>{
     `Right-only: ${rightOnly.length} ${rightOnly.length? 'e.g. '+rightOnly.slice(0,5).join(', ') : ''}`;
 
   // build output (strict inner join; skip rows lacking SKU or bad SKU)
-  const out=[];
+  const outChildren = [];
+  const outParents = [];
+  const outStandalone = [];
   let kept=0, skipped=0, missing=0;
 
   for(const r of namesRows){
@@ -331,15 +350,20 @@ byId('genBtn').addEventListener('click', ()=>{
     const colour = COLOR2 ? clean(t[COLOR2]) : "";
     const desc     = clean(t[DESC2] || r[DESC1] || baseName);
 
-    const partDesc = size && size.toUpperCase()!=="ONE SIZE" ? `${desc} ${size}` : desc;
-    const parentMatrix = size ? parentFromSku(sku) : "";
+
+    const isOS = isOneSize(size);
+    const partDesc = (!isOS && size) ? `${desc} ${size}` : desc;
+    const parentMatrix = (!isOS && size) ? parentFromSku(sku) : "";
     const category = categoryFrom(desc);
 
-    out.push({
+    const displayName = upcaseSizeTokens(formatName(desc));
+    const partDescription = upcaseSizeTokens(formatName(partDesc));
+
+   const baseRow = {
       "externalid": sku,
       "PartNumber": sku,
-      "PartDescription": partDesc,
-      "DisplayName": desc,
+      "PartDescription": partDescription,
+      "DisplayName": displayName,
       "Merchandise Hierarchy": category,
       "HSCode": hs,
       "CountryOfManufacture": coo,
@@ -371,27 +395,35 @@ byId('genBtn').addEventListener('click', ()=>{
       "cogsaccount": "50000 Cost of Goods Sold",
       "incomeaccount": "40001 Sales : Shopify Sales",
       "assetaccount": "12030 Inventory : Finished Goods",
+      "purchasetaxcode": "",
       "Matrix Type": size ? "Child Matrix Item" : "Standalone Item",
       "Parent Matrix item": parentMatrix,
       "Matrix - Colour": colour,   // <-- colour ONLY from tracker
       "Matrix Size": size
-    });
+    };
+    
+    if (!isOS && size) {
+      // true child matrix item
+      outChildren.push({ ...baseRow, "Matrix Type": "Child Matrix Item" });
+    } else {
+      // standalone (no size or ONE SIZE/OS)
+      outStandalone.push({ ...baseRow, "Matrix Type": "Standalone Item" });
+    }
     kept++;
   }
-
-  // add Matrix Parent rows if requested
+    // add Matrix Parent rows if requested
   if(byId('makeParents').checked){
     const groups = new Map();
-    for(const r of out){
+    for(const r of outChildren){
       const parent = r["Parent Matrix item"];
       const sz = (r["Matrix Size"]||"").toUpperCase();
-      if(!parent || sz==="ONE SIZE") continue;
+      if(!parent) continue; // (no need to check ONE SIZE now; children never include it)
       if(!groups.has(parent)) groups.set(parent, []);
       groups.get(parent).push(r);
     }
     for(const [parentCode, kids] of groups.entries()){
       const k0 = kids[0];
-      out.push({
+      outParents.push({
         "externalid": parentCode,
         "PartNumber": parentCode,
         "PartDescription": k0["DisplayName"],
@@ -401,16 +433,33 @@ byId('genBtn').addEventListener('click', ()=>{
         "CountryOfManufacture": k0["CountryOfManufacture"],
         "UPC": "",
         "unit type": "Each",
+        "stock unit - pair/pack/": "",
+        "purchase unit pair/pack": "",
+        "Sales unit - pair/pack/": "",
         "subsid": "Sisters & Seekers Limited",
-        "Class": "Product",
-        "Department": "SSUK Warehouse : SSUK - Ecomm",
+        "Class": "",
+        "Department": "Product",
+        "Location": "SSUK Warehouse : SSUK - Ecomm",
+        "children true/false": "",
+        "salesDescription": "",
         "Sale Price": k0["Sale Price"],
         "Item - Pricing 1 : Currency (Req)": "GBP",
         "Item - Pricing 1 : Price Level (Req)": "RRP",
+        "Item - Pricing 1 : Quantity (Req)" : "",
         "costing method": "FIFO",
+        "Cost": "",
+        "Drop Ship": "",
+        "spec order true/false": "",
+        "OrderUp toLevel": "",
+        "re-order multi": "",
+        "reordeer": "",
+        "Vendor": "",
+        "Prefered Vendor": "",
+        "Purchase price": "",
         "cogsaccount": "50000 Cost of Goods Sold",
         "incomeaccount": "40001 Sales : Shopify Sales",
         "assetaccount": "12030 Inventory : Finished Goods",
+        "purchasetaxcode": "",
         "Matrix Type": "Parent Matrix Item",
         "Parent Matrix item": "",
         "Matrix - Colour": "",
@@ -418,33 +467,56 @@ byId('genBtn').addEventListener('click', ()=>{
       });
     }
   }
-
-  // show preview + download
-  const csv = toCSV(out);
-  const blob = new Blob([csv], {type:"text/csv"});
-  const url = URL.createObjectURL(blob);
-  const dl = byId('dlLink');
-  dl.href = url;
-  dl.style.display = 'inline-block';
-  byId('log').innerHTML = `✅ ${out.length} rows ready (kept ${kept}, skipped ${skipped}, no match ${missing}).`;
-
-  const preview = out.slice(0,20);
-  const tbl = byId('previewTable');
-  tbl.innerHTML = "";
-  if (preview.length){
-    const headers = Object.keys(preview[0]);
-    const thead = document.createElement('thead');
-    const trh = document.createElement('tr');
-    headers.forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
-    thead.appendChild(trh);
-    tbl.appendChild(thead);
-    const tbody = document.createElement('tbody');
-    preview.forEach(r=>{
-      const tr=document.createElement('tr');
-      headers.forEach(h=>{ const td=document.createElement('td'); td.textContent=r[h]||""; tr.appendChild(td); });
-      tbody.appendChild(tr);
+    // show preview counts
+    byId('log').innerHTML =
+      `✅ ${outChildren.length} children · ${outParents.length} parents · ${outStandalone.length} standalone (kept ${kept}, skipped ${skipped}, no match ${missing}).`;
+  
+    if (typeof XLSX === "undefined") {
+      byId('log').innerHTML += `<br><span class="err">XLSX not found. Add the SheetJS script tag to your HTML.</span>`;
+      return;
+    }
+  
+    const wb  = XLSX.utils.book_new();
+    const wsChildren   = XLSX.utils.json_to_sheet(outChildren);
+    const wsParents    = XLSX.utils.json_to_sheet(outParents);
+    const wsStandalone = XLSX.utils.json_to_sheet(outStandalone);
+  
+    XLSX.utils.book_append_sheet(wb, wsChildren,   "Children");
+    XLSX.utils.book_append_sheet(wb, wsParents,    "Parents");
+    XLSX.utils.book_append_sheet(wb, wsStandalone, "Standalone");
+  
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const xlsBlob = new Blob([wbout], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     });
-    tbl.appendChild(tbody);
-    byId('previewCard').style.display='block';
-  }
-});
+    const url = URL.createObjectURL(xlsBlob);
+  
+    const dl = byId('dlLink');
+    dl.href = url;
+    dl.download = "items_export.xlsx";
+    dl.textContent = "Download Excel (Children + Parents + Standalone)";
+    dl.style.display = 'inline-block';
+  
+    // keep your preview (e.g., show Children or Standalone—your call)
+
+    // Optional: quick preview table (children only)
+    const preview = outChildren.slice(0,20);
+    const tbl = byId('previewTable');
+    tbl.innerHTML = "";
+    if (preview.length){
+      const headers = Object.keys(preview[0]);
+      const thead = document.createElement('thead');
+      const trh = document.createElement('tr');
+      headers.forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
+      thead.appendChild(trh);
+      tbl.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      preview.forEach(r=>{
+        const tr=document.createElement('tr');
+        headers.forEach(h=>{ const td=document.createElement('td'); td.textContent=r[h]||""; tr.appendChild(td); });
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody);
+      byId('previewCard').style.display='block';
+    }
+  }); // <-- this closes the click handler properly
