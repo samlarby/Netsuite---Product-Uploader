@@ -102,9 +102,12 @@ function toCSV(rows){
 
 function categoryFrom(t, brand = "Sisters and Seekers"){
   t = (t||'').toLowerCase();
-
+  
+  const b = String(brand||"").trim().toUpperCase();
+  brand = (b === "BK" || /BROTHER|KIN/.test(b))
+    ? "Brother & Kin"
+    : "Sisters & Seekers";
   // Safety: ensure correct brand formatting
-  brand = /kin/i.test(brand) ? "Brother & Kin" : "SistersandSeekers";
 
   // ACCESSORIES
   if(/bag|purse|tote/.test(t))
@@ -114,7 +117,7 @@ function categoryFrom(t, brand = "Sisters and Seekers"){
   if(/hair|scrunchie|clip|claw/.test(t))
     return `${brand} : Accessories : Accessories : Hair Accessories`;
   if(/tight|hosiery|stocking/.test(t))
-    return `${brand} : Accessories : Accessories : Hoisery`;
+    return `${brand} : Accessories : Accessories : Hosiery`;
   if(/jewel|necklace|bracelet|earring|ring|chain/.test(t))
     return `${brand} : Accessories : Accessories : Jewellery`;
   if(/sunglass|shades/.test(t))
@@ -293,12 +296,16 @@ byId('genBtn').addEventListener('click', ()=>{
   const COO1 = findHeader(namesRows, ["COO"]);
   const RRP1 = findHeader(namesRows, ["RRP","Sell Price","Retail"]);
   const DESC1= findHeader(namesRows, ["DESCRIPTION","DETAILS","NAME"]);
-
+  
+  const BRAND2 = findHeader(trackerRows, ["Brand","Label","Collection","BRAND"]);
   const STYLE2 = findHeader(trackerRows, ["STYLE CODE","STYLE"]);
   const DESC2  = findHeader(trackerRows, ["Line Description","Description","Name"]);
   const COO2   = findHeader(trackerRows, ["COO","Country of Origin"]);
   const PRICE2 = findHeader(trackerRows, ["Sell Price","RRP","Retail","Retail Price","Price"]);
   const COLOR2 = findHeader(trackerRows, ["Colour","Color","COLOUR"]);
+  
+  if (BRAND2) ffillColumn(trackerRows, BRAND2);
+  
 
   if(!NAME || !SKU){ byId('log').innerHTML=`<span class="err">Missing NAME or SKU in Names CSV.</span>`; return; }
   if(!STYLE2){ byId('log').innerHTML=`<span class="err">Missing STYLE CODE in Tracker CSV.</span>`; return; }
@@ -352,14 +359,25 @@ byId('genBtn').addEventListener('click', ()=>{
 
 
     const isOS = isOneSize(size);
-    const partDesc = (!isOS && size) ? `${desc} ${size}` : desc;
+    const partDesc = (!isOS && size) ? `${desc}` : desc;
     const parentMatrix = (!isOS && size) ? parentFromSku(sku) : "";
-    const category = categoryFrom(desc);
+    // Cleaned brand cell from tracker, then fallbacks
+    const brandCell = BRAND2 ? clean(t[BRAND2]) : "";
+    let brandVal =
+      (/^BK$/i.test(brandCell) ? "BK" :
+       /^SS$/i.test(brandCell) ? "SS" :
+       /^BK/i.test(sku)        ? "BK" :
+       /^SS/i.test(sku)        ? "SS" :
+       /brother|kin/i.test(name) ? "BK" :
+       /sisters|seekers/i.test(name) ? "SS" :
+       "SS");
+
+    const category = categoryFrom(desc, brandVal);
 
     const displayName = upcaseSizeTokens(formatName(desc));
     const partDescription = upcaseSizeTokens(formatName(partDesc));
 
-   const baseRow = {
+    const baseRow = {
       "externalid": sku,
       "PartNumber": sku,
       "PartDescription": partDescription,
@@ -412,15 +430,15 @@ byId('genBtn').addEventListener('click', ()=>{
     kept++;
   }
     // add Matrix Parent rows if requested
-  if(byId('makeParents').checked){
+  // --- Always add Matrix Parent rows when children exist ---
     const groups = new Map();
     for(const r of outChildren){
       const parent = r["Parent Matrix item"];
-      const sz = (r["Matrix Size"]||"").toUpperCase();
-      if(!parent) continue; // (no need to check ONE SIZE now; children never include it)
+      if(!parent) continue;
       if(!groups.has(parent)) groups.set(parent, []);
       groups.get(parent).push(r);
     }
+  
     for(const [parentCode, kids] of groups.entries()){
       const k0 = kids[0];
       outParents.push({
@@ -466,57 +484,64 @@ byId('genBtn').addEventListener('click', ()=>{
         "Matrix Size": ""
       });
     }
-  }
-    // show preview counts
-    byId('log').innerHTML =
-      `✅ ${outChildren.length} children · ${outParents.length} parents · ${outStandalone.length} standalone (kept ${kept}, skipped ${skipped}, no match ${missing}).`;
-  
-    if (typeof XLSX === "undefined") {
-      byId('log').innerHTML += `<br><span class="err">XLSX not found. Add the SheetJS script tag to your HTML.</span>`;
-      return;
-    }
-  
-    const wb  = XLSX.utils.book_new();
-    const wsChildren   = XLSX.utils.json_to_sheet(outChildren);
-    const wsParents    = XLSX.utils.json_to_sheet(outParents);
-    const wsStandalone = XLSX.utils.json_to_sheet(outStandalone);
-  
-    XLSX.utils.book_append_sheet(wb, wsChildren,   "Children");
-    XLSX.utils.book_append_sheet(wb, wsParents,    "Parents");
-    XLSX.utils.book_append_sheet(wb, wsStandalone, "Standalone");
-  
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    const xlsBlob = new Blob([wbout], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    });
-    const url = URL.createObjectURL(xlsBlob);
-  
-    const dl = byId('dlLink');
-    dl.href = url;
-    dl.download = "items_export.xlsx";
-    dl.textContent = "Download Excel (Children + Parents + Standalone)";
-    dl.style.display = 'inline-block';
-  
-    // keep your preview (e.g., show Children or Standalone—your call)
+ 
+  // --- Remove unnecessary columns from Standalone sheet ---
+  const columnsToRemove = ["Matrix Type", "Parent Matrix item", "Matrix - Colour", "Matrix Size"];
+  outStandalone.forEach(row => {
+    columnsToRemove.forEach(col => delete row[col]);
+  });
 
-    // Optional: quick preview table (children only)
-    const preview = outChildren.slice(0,20);
-    const tbl = byId('previewTable');
-    tbl.innerHTML = "";
-    if (preview.length){
-      const headers = Object.keys(preview[0]);
-      const thead = document.createElement('thead');
-      const trh = document.createElement('tr');
-      headers.forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
-      thead.appendChild(trh);
-      tbl.appendChild(thead);
-      const tbody = document.createElement('tbody');
-      preview.forEach(r=>{
-        const tr=document.createElement('tr');
-        headers.forEach(h=>{ const td=document.createElement('td'); td.textContent=r[h]||""; tr.appendChild(td); });
-        tbody.appendChild(tr);
-      });
-      tbl.appendChild(tbody);
-      byId('previewCard').style.display='block';
-    }
-  }); // <-- this closes the click handler properly
+  
+  // show preview counts
+  byId('log').innerHTML =
+    `✅ ${outChildren.length} children · ${outParents.length} parents · ${outStandalone.length} standalone (kept ${kept}, skipped ${skipped}, no match ${missing}).`;
+
+  if (typeof XLSX === "undefined") {
+    byId('log').innerHTML += `<br><span class="err">XLSX not found. Add the SheetJS script tag to your HTML.</span>`;
+    return;
+  }
+
+  const wb  = XLSX.utils.book_new();
+  const wsChildren   = XLSX.utils.json_to_sheet(outChildren);
+  const wsParents    = XLSX.utils.json_to_sheet(outParents);
+  const wsStandalone = XLSX.utils.json_to_sheet(outStandalone);
+
+  XLSX.utils.book_append_sheet(wb, wsChildren,   "Children");
+  XLSX.utils.book_append_sheet(wb, wsParents,    "Parents");
+  XLSX.utils.book_append_sheet(wb, wsStandalone, "None Matrix Items");
+
+  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const xlsBlob = new Blob([wbout], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  });
+  const url = URL.createObjectURL(xlsBlob);
+
+  const dl = byId('dlLink');
+  dl.href = url;
+  dl.download = "items_export.xlsx";
+  dl.textContent = "Download Excel (Children + Parents + None Matrix Items)";
+  dl.style.display = 'inline-block';
+
+  // keep your preview (e.g., show Children or Standalone—your call)
+
+  // Optional: quick preview table (children only)
+  const preview = outChildren.slice(0,20);
+  const tbl = byId('previewTable');
+  tbl.innerHTML = "";
+  if (preview.length){
+    const headers = Object.keys(preview[0]);
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    headers.forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
+    thead.appendChild(trh);
+    tbl.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    preview.forEach(r=>{
+      const tr=document.createElement('tr');
+      headers.forEach(h=>{ const td=document.createElement('td'); td.textContent=r[h]||""; tr.appendChild(td); });
+      tbody.appendChild(tr);
+    });
+    tbl.appendChild(tbody);
+    byId('previewCard').style.display='block';
+  }
+}); // <-- this closes the click handler properly
