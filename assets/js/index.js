@@ -106,7 +106,7 @@ function categoryFrom(t, brand = "Sisters and Seekers"){
   const b = String(brand||"").trim().toUpperCase();
   brand = (b === "BK" || /BROTHER|KIN/.test(b))
     ? "Brother & Kin"
-    : "Sisters & Seekers";
+    : "SistersandSeekers";
   // Safety: ensure correct brand formatting
 
   // ACCESSORIES
@@ -148,7 +148,7 @@ function categoryFrom(t, brand = "Sisters and Seekers"){
   // KNITWEAR
   if(/cardi/.test(t))
     return `${brand} : Clothing : Knitwear : Cardigans`;
-  if(/knitted hoodie/.test(t))
+  if(/knitted hoodie|knit hoodie/.test(t))
     return `${brand} : Clothing : Knitwear : Knitted Hoodies`;
   if(/jumper|sweater|knit/.test(t))
     return `${brand} : Clothing : Knitwear : Jumpers`;
@@ -232,6 +232,8 @@ function formatCOO(raw) {
 
   // handle Turkey special case
   if (s === "turkey") return "Türkiye";
+  if (s === "uk") return "United Kingdom"; 
+  
 
   // capitalize only the first letter
   return s.charAt(0).toUpperCase() + s.slice(1);
