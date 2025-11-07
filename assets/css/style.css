@@ -138,3 +138,9 @@ details{
   padding:10px;
   color:var(--muted)
 }
+
+ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}

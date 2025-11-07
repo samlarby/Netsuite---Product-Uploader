@@ -9,10 +9,12 @@
 </head>
 <body>
 <header class="wrap">
+  <ul>
+    <li><a href="po_uploader.html">PO Uploader</a></li>
+  </ul>
   <h1>🧩 ERP Upload Builder — <span class="pill">NAME ↔ STYLE CODE</span></h1>
   <div class="hint">Upload <b>names_and_descriptions.csv</b> and <b>range_tracker.csv</b>. Click Generate to download <b>erp_upload.csv</b>.</div>
 </header>
-
 <div class="wrap">
   <div class="grid">
     <div class="card">
@@ -21,7 +23,6 @@
       <div class="hint">Needs: <span class="mono">NAME, SKU, SIZE, HS Code, EAN</span> (NAME may be blank on size rows — we forward-fill it)</div>
       <div id="namesStatus" class="hint"></div>
     </div>
-
     <div class="card">
       <label>2) Upload Range Tracker (CSV/TSV)</label>
       <input id="trackerFile" type="file" accept=".csv,.tsv,.txt" />
@@ -29,7 +30,6 @@
       <div id="trackerStatus" class="hint"></div>
     </div>
   </div>
-
   <div class="card" style="margin-top:16px">
     <div class="row">
       <button id="genBtn">🚀 Generate ERP CSV</button>
@@ -41,7 +41,6 @@
       <div id="diag" class="hint" style="margin-top:8px"></div>
     </details>
   </div>
-
   <div class="card" id="previewCard" style="display:none">
     <label>Preview (first 20 rows)</label>
     <div style="overflow:auto"><table id="previewTable"></table></div>
