@@ -2,21 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>PO Upload Generator</title>
+  <title>PO Upload Creator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="assets/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <header class="wrap">
+  <header class="">
     <ul>
       <li><a href="index.html">Product Creator</a></li>
     </ul>
     <h1>🧩 PO Upload Builder — <span class="pill">Import Intake Tracker</span></h1>
-    <div class="hint">Upload <b>Intake tracker with the correct PO's within it</b>. Click Generate to download <b></b>.</div>
   </header>
   <div class="wrap">
-    <div class="grid">
+    <div class="po-uploader-grid">
       <div class="card">
         <h1>PO Upload Generator</h1>
         <p class="subtitle">
@@ -36,16 +35,3 @@
       <script src="assets/js/po_uploader.js"></script>
 </body>
 </html>
-
-
-
-
-<!-- <div class="card">
-  <label for="partFile">Part Number mapping file (optional)</label>
-  <input type="file" id="partFile" accept=".xlsx,.xlsm,.xls,.csv" />
-  <div class="hint">
-    Expected headers: STYLE CODE, SKU VAR, SIZE, PARTNUMBER.
-  </div>
-  <button id="generateBtn">Generate Upload CSV</button>
-  <div class="status" id="status"></div>
-</div> -->

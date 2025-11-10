@@ -115,8 +115,8 @@ document.addEventListener("DOMContentLoaded", () => {
     else if (u === "WELLSUCCEED") {
       return "SUP00300 Wellsucceed Embroidery Limited"
     }
-    else if (u === "") {
-      return "SUP00300 Wellsucceed Embroidery Limited"
+    else if (u === "ELEANOLA") {
+      return "SUP00328 Eleanola Inc"
     }
     return toProper(raw);
   }
