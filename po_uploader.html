@@ -4,15 +4,16 @@
   <meta charset="UTF-8" />
   <title>PO Upload Generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- SheetJS for reading Excel files -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <header class="wrap">
     <ul>
       <li><a href="index.html">Product Creator</a></li>
     </ul>
+    <h1>🧩 PO Upload Builder — <span class="pill">Import Intake Tracker</span></h1>
+    <div class="hint">Upload <b>Intake tracker with the correct PO's within it</b>. Click Generate to download <b></b>.</div>
   </header>
   <div class="wrap">
     <div class="grid">
@@ -21,25 +22,30 @@
         <p class="subtitle">
           Upload your PO planning export and optional Part Number mapping. This will generate a NetSuite-ready CSV.
         </p>
-    
         <label for="poFile">PO planning file (PO_Source)</label>
         <input type="file" id="poFile" accept=".xlsx,.xlsm,.xls,.csv" />
         <div class="hint">
           Must contain: DESCRIPTION, STYLE CODE, PO, PLANNED DELIVERY WC, SUPPLIER, CURRENCY, UNIT COST GBP,
           SKU VAR, STATUS, and size columns: ONE SIZE, XXS, XS, S, M, L, XL, 2XL, 3XL.
         </div>
-      </div>
-      <div class="card">
-        <label for="partFile">Part Number mapping file (optional)</label>
-        <input type="file" id="partFile" accept=".xlsx,.xlsm,.xls,.csv" />
-        <div class="hint">
-          Expected headers: STYLE CODE, SKU VAR, SIZE, PARTNUMBER.
-        </div>
         <button id="generateBtn">Generate Upload CSV</button>
         <div class="status" id="status"></div>
       </div>
     </div>
   </div>
-      <script> src="assets/js/po_uploader.js" </script>
+      <script src="assets/js/po_uploader.js"></script>
 </body>
 </html>
+
+
+
+
+<!-- <div class="card">
+  <label for="partFile">Part Number mapping file (optional)</label>
+  <input type="file" id="partFile" accept=".xlsx,.xlsm,.xls,.csv" />
+  <div class="hint">
+    Expected headers: STYLE CODE, SKU VAR, SIZE, PARTNUMBER.
+  </div>
+  <button id="generateBtn">Generate Upload CSV</button>
+  <div class="status" id="status"></div>
+</div> -->
