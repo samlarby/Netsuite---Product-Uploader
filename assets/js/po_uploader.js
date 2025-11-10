@@ -103,8 +103,20 @@ document.addEventListener("DOMContentLoaded", () => {
     else if (u === "LI & FUNG") {
       return "*******"
     }
+    else if (u === "LUCKY MONDAY") {
+      return "*******"
+    }
     else if (u === "WETEX") {
       return "SUP00302 Wetex Fashion UK"
+    }
+    else if (u === "SKYLAND") {
+      return "SUP00356 Skyland"
+    }
+    else if (u === "WELLSUCCEED") {
+      return "SUP00300 Wellsucceed Embroidery Limited"
+    }
+    else if (u === "") {
+      return "SUP00300 Wellsucceed Embroidery Limited"
     }
     return toProper(raw);
   }
