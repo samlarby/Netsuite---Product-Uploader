@@ -387,6 +387,7 @@ byId('genBtn').addEventListener('click', ()=>{
       "Merchandise Hierarchy": category,
       "HSCode": hs,
       "CountryOfManufacture": coo,
+      "Item Weight": "",
       "UPC": ean,
       "unit type": "Each",
       "stock unit - pair/pack/": "",
@@ -518,11 +519,14 @@ byId('genBtn').addEventListener('click', ()=>{
   });
   const url = URL.createObjectURL(xlsBlob);
 
-  const dl = byId('dlLink');
-  dl.href = url;
-  dl.download = "items_export.xlsx";
-  dl.textContent = "Download Excel (Children + Parents + None Matrix Items)";
-  dl.style.display = 'inline-block';
+  // Example at the end of your generate handler
+  // ✅ Correct: attach URL to download button and show it
+  const link = document.getElementById("dlLink");
+  link.href = url;
+  link.style.display = "inline-block";   // show the download button
+  link.click();
+
+
 
   // keep your preview (e.g., show Children or Standalone—your call)
 
