@@ -83,40 +83,40 @@ document.addEventListener("DOMContentLoaded", () => {
       return "SUP00030 Amplebox Limited";
     }
     else if (u === "SJA FASHION") {
-      return "SUP00243 Sja Fashion";
+      return "SUP00243";
     }
     else if (u === "DP") {
-      return "	SUP00355 DP Limited";
+      return "	SUP00355";
     }
     else if (u === "GRAND APPARELS") {
-      return "SUP00130 Grand Apparels Designs";
+      return "SUP00130";
     }
     else if (u === "RAGTEKS") {
-      return "SUP00354 Ragteks";
+      return "SUP00354";
     }
     else if (u === "ERSIN") {
-      return "SUP00361 Ersin Limited"
+      return "SUP00361"
     }
     else if (u === "FLOMAK") {
-      return "SUP00363 Flomak Group"
+      return "SUP00363"
     }
     else if (u === "LI & FUNG") {
-      return "*******"
+      return "Li & Fung"
     }
     else if (u === "LUCKY MONDAY") {
-      return "*******"
+      return "SUP00403"
     }
     else if (u === "WETEX") {
-      return "SUP00302 Wetex Fashion UK"
+      return "SUP00302"
     }
     else if (u === "SKYLAND") {
-      return "SUP00356 Skyland"
+      return "SUP00356"
     }
     else if (u === "WELLSUCCEED") {
-      return "SUP00300 Wellsucceed Embroidery Limited"
+      return "SUP00300"
     }
     else if (u === "ELEANOLA") {
-      return "SUP00328 Eleanola Inc"
+      return "SUP00328"
     }
     return toProper(raw);
   }
@@ -163,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const rate = parseFloat(rateRaw) || 0;
       const supplier = supplierLabel(supplierRaw);
 
-      let extBase = `${po} ${styleCode}`;
+      let extBase = `${po}`;
       if (skuVar && skuVar !== "0") {
         extBase += ` (${variantLabel(skuVar)})`;
       }
@@ -197,23 +197,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const amount = rate ? qty * rate : "";
 
         out.push({
-          "ExternalID": extBase,
-          "Orderline": orderline,
-          "PartNumber": "*** Add parent and child item ***",
-          "PartDescription": partDesc,
+          "PurchaseOrderNumber": extBase,
+          "Status": "Submitted",
+          "ItemCode": "*** Add Item Code ***",
           "Quantity": qty,
-          "PO": po,
-          "Date": todayStr,
           "Supplier": supplier,
-          "Subsidiary": "8",
-          "Department": "Product",
-          "Currency": currency,
-          "Exchange Rate": 1,
-          "Rate": rate || "",
+          "CostPrice": rate || "",
           "Amount": amount !== "" ? amount : "",
           "Taxcode": "VAT:20% - S-GB",
-          "Expected Date": expectedDate,
-          "Memo": memo
+          "ExpectedDeliveryDate": expectedDate,
         });
       }
     }
