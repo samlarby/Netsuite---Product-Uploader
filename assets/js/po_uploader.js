@@ -6,18 +6,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const generateBtn = document.getElementById("generateBtn");
   generateBtn.addEventListener("click", async () => {
     console.log("Generate button clicked");
-    const poFile = document.getElementById("poFile").files[0];
     const statusEl = document.getElementById("status");
+    const poTextEl = document.getElementById("poText");
+
     statusEl.textContent = "";
 
-    if (!poFile) {
-      statusEl.innerHTML = "<strong>Error:</strong> Please select a PO planning file.";
+    const poText = (poTextEl.value || "").trim();
+    if (!poText) {
+      statusEl.innerHTML = "<strong>Error:</strong> Please paste PO data into the box.";
       return;
     }
 
     try {
-      statusEl.textContent = "Reading file...";
-      const poRows = await readWorkbook(poFile);
+      statusEl.textContent = "Parsing pasted data...";
+
+      // Turn the pasted text into an array of row objects
+      const poRows = parsePastedTable(poText);
+
+      if (!poRows.length) {
+        statusEl.innerHTML = "<strong>Error:</strong> Could not find any rows in the pasted data.";
+        return;
+      }
 
       const uploadRows = buildUploadRows(poRows);
 
@@ -33,29 +42,41 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error(err);
       statusEl.innerHTML =
-        "<strong>Error:</strong> " + (err.message || "Something went wrong while processing the file.");
+        "<strong>Error:</strong> " + (err.message || "Something went wrong while processing the data.");
     }
   });
 
-  // ---------- File Reading ----------
-  function readWorkbook(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const wb = XLSX.read(data, { type: "array" });
-          const sheetName = wb.SheetNames[0];
-          const sheet = wb.Sheets[sheetName];
-          const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-          resolve(json);
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.onerror = (e) => reject(e);
-      reader.readAsArrayBuffer(file);
-    });
+  // ---------- Parse pasted table ----------
+  // Supports tab-separated (Excel paste) or comma-separated text.
+  function parsePastedTable(text) {
+    const lines = text
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => l !== "");
+
+    if (!lines.length) return [];
+
+    const headerLine = lines[0];
+    const separator = headerLine.includes("\t") ? "\t" : ","; // auto-detect
+    const headers = headerLine.split(separator).map(h => h.trim());
+
+    const rows = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+
+      const parts = line.split(separator);
+      const rowObj = {};
+
+      headers.forEach((h, idx) => {
+        rowObj[h] = (parts[idx] || "").trim();
+      });
+
+      rows.push(rowObj);
+    }
+
+    return rows;
   }
 
   // ---------- Helpers ----------
@@ -65,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
     str = String(str || "").toLowerCase();
     return str.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1));
   }
+
   function variantLabel(raw) {
     const v = normUpper(raw);
     if (v === "" || v === "REG") return "Regular";
@@ -72,11 +94,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (v === "PETITE") return "Petite";
     return norm(raw);
   }
+
   function displaySize(sizeName) {
     const v = normUpper(sizeName);
     if (v === "XXS") return "2XS";
     return sizeName;
   }
+
   function supplierLabel(raw) {
     const u = normUpper(raw);
     if (u === "AMPLEBOX" || u === "AMPLEBOX LIMITED") {
@@ -86,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return "SUP00243";
     }
     else if (u === "DP") {
-      return "	SUP00355";
+      return "SUP00355";
     }
     else if (u === "GRAND APPARELS") {
       return "SUP00130";
@@ -95,51 +119,41 @@ document.addEventListener("DOMContentLoaded", () => {
       return "SUP00354";
     }
     else if (u === "ERSIN") {
-      return "SUP00361"
+      return "SUP00361";
     }
     else if (u === "FLOMAK") {
-      return "SUP00363"
+      return "SUP00363";
     }
     else if (u === "LI & FUNG") {
-      return "Li & Fung"
+      return "Li & Fung";
     }
     else if (u === "LUCKY MONDAY") {
-      return "SUP00403"
+      return "SUP00403";
     }
     else if (u === "WETEX") {
-      return "SUP00302"
+      return "SUP00302";
     }
     else if (u === "SKYLAND") {
-      return "SUP00356"
+      return "SUP00356";
     }
     else if (u === "WELLSUCCEED") {
-      return "SUP00300"
+      return "SUP00300";
     }
     else if (u === "ELEANOLA") {
-      return "SUP00328"
+      return "SUP00328";
     }
     return toProper(raw);
   }
-  function formatToday() {
-    const d = new Date();
-    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
-  }
+
   function formatExpectedDate(val) {
+    // For pasted data we just keep whatever text the user pasted.
     if (!val) return "";
-    if (typeof val === "string") return val.trim();
-    if (typeof val === "number") {
-      const jsDate = XLSX.SSF.parse_date_code(val);
-      if (!jsDate) return "";
-      const d = new Date(jsDate.y, jsDate.m - 1, jsDate.d);
-      return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
-    }
-    return "";
+    return String(val).trim();
   }
 
   // ---------- Main Transform ----------
   function buildUploadRows(poRows) {
     const headersMap = guessHeaders(poRows[0] || {});
-    const todayStr = formatToday();
     const out = [];
     let lastExtBase = "";
     let orderline = 0;
@@ -159,14 +173,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const rateRaw = row[headersMap.UNIT_COST];
       const planDateRaw = row[headersMap.PLANNED_WC];
 
-      const currency = currRaw || "GBP";
+      const currency = currRaw || "GBP"; // not actually used in output at the moment
       const rate = parseFloat(rateRaw) || 0;
       const supplier = supplierLabel(supplierRaw);
 
-      let extBase = `${po}`;
-      if (skuVar && skuVar !== "0") {
-        extBase += ` (${variantLabel(skuVar)})`;
-      }
+      let extBase = `${po} ${descRaw}`;
 
       let memo = toProper(descRaw);
       if (skuVar && skuVar !== "0") {
@@ -176,7 +187,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const expectedDate = formatExpectedDate(planDateRaw);
 
       for (const sizeCol of sizeColumns) {
-        const qtyRaw = row[sizeCol] ?? row[sizeCol.toUpperCase()] ?? row[sizeCol.toLowerCase()];
+        const qtyRaw =
+          row[sizeCol] ??
+          row[sizeCol.toUpperCase()] ??
+          row[sizeCol.toLowerCase()];
+
         const qty = parseFloat(qtyRaw);
         if (!qty || isNaN(qty) || qty <= 0) continue;
 
@@ -194,7 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (skuVar && skuVar !== "0") partDesc += ` (${variantLabel(skuVar)})`;
         partDesc += sizeCol.toUpperCase() !== "ONE SIZE" ? ` ${dispSize}` : ` One Size`;
 
-        const amount = rate ? qty * rate : "";
+        const amount = rate ? +(qty * rate).toFixed(2) : "";
 
         out.push({
           "PurchaseOrderNumber": extBase,
@@ -248,7 +263,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return v;
     };
-    return [headers.join(","), ...rows.map(row => headers.map(h => escape(row[h])).join(","))].join("\r\n");
+    return [
+      headers.join(","),
+      ...rows.map(row => headers.map(h => escape(row[h])).join(","))
+    ].join("\r\n");
   }
 
   function downloadCSV(csv, filename) {

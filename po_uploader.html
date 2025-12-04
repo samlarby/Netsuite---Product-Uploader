@@ -21,14 +21,17 @@
         <p class="subtitle">
           Upload your PO planning export and optional Part Number mapping. This will generate a NetSuite-ready CSV.
         </p>
-        <label for="poFile">PO planning file (PO_Source)</label>
-        <input type="file" id="poFile" accept=".xlsx,.xlsm,.xls,.csv" />
-        <div class="hint">
+        <textarea id="poText" rows="10" style="width:100%;" placeholder="Paste your PO data here from Excel (include the header row)"></textarea>
+        <br>
+        <button id="generateBtn">Generate CSV</button>
+        <div id="status"></div>
+
+        <!-- <div class="hint">
           Must contain: DESCRIPTION, STYLE CODE, PO, PLANNED DELIVERY WC, SUPPLIER, CURRENCY, UNIT COST GBP,
           SKU VAR, STATUS, and size columns: ONE SIZE, XXS, XS, S, M, L, XL, 2XL, 3XL.
         </div>
         <button id="generateBtn">Generate Upload CSV</button>
-        <div class="status" id="status"></div>
+        <div class="status" id="status"></div> -->
       </div>
     </div>
   </div>
